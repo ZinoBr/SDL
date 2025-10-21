@@ -1,2 +1,2 @@
 # Stacked Domain Learning (SDL)
-Repository for R syntax in the scope of the Stacked Domain Learning (SDL) framework
+Repository for R syntax and supplementary material in the scope of Stacked Domain Learning (SDL).
