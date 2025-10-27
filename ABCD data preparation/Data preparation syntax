@@ -1,0 +1,438 @@
+# 1. Data preparation
+
+# 1.1 Delayed reward discounting data
+
+ddis_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_ddis.csv")
+
+# Subset for 3 year follow up time
+ddis_data <- ddis_data[c(ddis_data$eventname == "3_year_follow_up_y_arm_1"),]
+
+# Calculate AUC scores for DDIS given specified time point
+source("calculateAUC.R")
+ddis_data_auc <- calculate_auc(ddis_data)
+
+# Round the AUC values to two decimal places
+ddis_data_auc$discAUC <- round(ddis_data_auc$discAUC, digits = 2)
+
+# replace ddis data with auc measure
+ddis_data <- ddis_data_auc[,c(1,2,29)]
+ddis_data[,-c(1:2)] <- round(as.numeric(ddis_data[,-c(1:2)]), digits = 2)
+
+# 1.2 MRI data
+
+# Variable selection function
+
+# Load table with relevant MRI variables for the analysis
+
+# As dataframe
+mri_var_names_df <- read.csv("ABCD DDIS variable names.csv")
+
+%% COMMENT: Add syntax for retrieving DDIS variable names
+
+# As vector
+mri_var_names_vec <- as.vector(unlist(mri_var_names_df)[unlist(mri_var_names_df) != ""])
+
+# Function to subset table based on variable selection and time point
+subset_var_sel <- function(data){
+data <- data[data$eventname == "2_year_follow_up_y_arm_1",]
+data <- data[, names(data) %in% c("src_subject_id",mri_var_names_vec)]
+return(data)
+} 
+
+# Structural MRI
+
+# Volume (cortical)
+
+# load data
+sMRI_vol_cortical_data <- read.csv("abcd-data-release-5.1/core/imaging/mri_y_smr_vol_dsk.csv")
+
+# subset relevant variables
+sMRI_vol_cortical_subset <- subset_var_sel(sMRI_vol_cortical_data)
+
+# Volume (subcortical)
+# load data
+sMRI_vol_subcortical_data <- read.csv("/release_5_1_0/NDA/abcd-data-release-5.1/core/imaging/mri_y_smr_vol_aseg.csv")
+
+# subset relevant variables
+sMRI_vol_subcortical_subset <- subset_var_sel(sMRI_vol_subcortical_data)
+
+
+# Cortical thickness (cortical)
+
+# load data
+sMRI_thick_cortical_data <- read.csv("/abcd-data-release-5.1/core/imaging/mri_y_smr_thk_dsk.csv")
+
+# subset relevant variables
+sMRI_thick_cortical_subset <- subset_var_sel(sMRI_thick_cortical_data)
+
+# Task fMRI
+
+# Cortical
+
+# Load file with tables for task fmri data
+fMRI_cort_all <- readRDS("fMRI_cort_all.rds")
+
+# Subset data based on variable selection
+fMRI_cort_all <- lapply(fMRI_cort_all, subset_var_sel)
+ 
+## MID
+fMRI_cort_mid <- fMRI_cort_all[grepl("mid",  names(fMRI_cort_all))]
+
+## SST
+
+## nBack
+
+# Subcortical
+
+fMRI_subcort_all <- readRDS("fMRI_subcort_all.rds")
+
+# subset relevant variables
+fMRI_subcort_all <- lapply(fMRI_subcort_all, subset_var_sel)
+
+
+
+# RS fMRI
+
+# Cortical
+rsfMRI_cort_all <- read.csv("/abcd-data-release-5.1/core/imaging/mri_y_rsfmr_var_dsk.csv")
+
+# subset relevant variables
+rsfMRI_cort_subset <- subset_var_sel(rsfMRI_cort_all)
+
+# Subcortical
+rsfMRI_subcort_all <- read.csv("/abcd-data-release-5.1/core/imaging/mri_y_rsfmr_var_aseg.csv")
+
+# subset relevant variables
+rsfMRI_subcort_subset <- subset_var_sel(rsfMRI_subcort_all)
+
+# 1.3 Cognition data
+
+# Function to subset timepoint
+subset_time <- function(data){
+data <- data[data$eventname == "2_year_follow_up_y_arm_1",]
+}
+
+# NIH toolbox
+
+# load NIH toolbox data 
+NIH_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_nihtb.csv")
+
+NIH_selection <- c(
+"src_subject_id",
+"eventname",
+"nihtbx_picvocab_uncorrected",
+"nihtbx_flanker_uncorrected",
+"nihtbx_list_uncorrected",
+"nihtbx_cardsort_uncorrected",
+"nihtbx_pattern_uncorrected",
+"nihtbx_picture_uncorrected",
+"nihtbx_reading_uncorrected")
+
+# Define indexes for selection
+NIH_selection_indexes <- names(NIH_data) %in% NIH_selection
+
+# Subset based on selected variables and timepoint
+NIH_data <- NIH_data[,NIH_selection_indexes]
+NIH_data <- NIH_data[NIH_data$eventname == "2_year_follow_up_y_arm_1",]
+
+# Exclude variables with very high numbers of missing values
+NIH_excl <- names(NIH_data) %in% c("nihtbx_list_uncorrected","nihtbx_cardsort_uncorrected", "eventname")
+NIH_data_2y <- NIH_data[,!NIH_excl]
+
+# Check for extreme values
+# apply(NIH_data[,-(1:2)],2,function(x)summary(as.numeric(x)))
+# apply(NIH_data[,-(1:2)],2,function(x)sort(boxplot(as.numeric(x))$out))
+
+
+# OPTION: Add responses of excluded subscales from baseline timepoint
+
+# load NIH toolbox data 
+NIH_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_nihtb.csv")
+
+NIH_selection <- c(
+"src_subject_id",
+"eventname",
+"nihtbx_list_uncorrected",
+"nihtbx_cardsort_uncorrected")
+
+# Define indexes for selection
+NIH_selection_indexes <- names(NIH_data) %in% c("src_subject_id",NIH_selection)
+
+# Subset based on selected variables and timepoint
+NIH_data <- NIH_data[,NIH_selection_indexes]
+NIH_data_baseline <- NIH_data[NIH_data$eventname == "baseline_year_1_arm_1",]
+
+# Check for extreme values
+# apply(NIH_data_baseline[,-(1:2)],2,function(x)summary(as.numeric(x)))
+# apply(NIH_data_baseline[,-(1:2)],2,function(x)sort(boxplot(as.numeric(x))$out))
+
+# Little Man Task (LMT)
+
+# Load lmt data
+lmt_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_lmt.csv")
+
+# Subset timepoint
+lmt_data <- subset_time(lmt_data)
+
+# Subset efficiency score and subject ID
+lmt_data <- lmt_data[,c("src_subject_id","lmt_scr_efficiency")]
+
+# COMMENT: The efficiency score is the ratio of the percentage of correct responses to reaction time, and is more a measure of overal cognitive efficiency in visuospatial processing, whereas the pure correct response ignoring response time is more about accuracy alone.
+
+# Check for outliers
+summary(lmt_data[,2])
+boxplot(lmt_data$lmt_scr_efficiency)$out
+
+# Turn extreme values for efficiency to NA
+lmt_data[which( lmt_data$lmt_scr_efficiency %in% boxplot(lmt_data$lmt_scr_efficiency)$out),"lmt_scr_efficiency"] <- NA
+
+# COMMENT: Exclusion of 14 responses due to extreme values
+
+# WISCV Matrix reasoning
+
+# Load lmt data
+wiscv_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_wisc.csv")
+
+# Subset timepoint
+# wiscv_data <- subset_time(wiscv_data)
+# COMMENT: Data available only for baseline timepoint
+
+# Check for extreme values
+# summary(wiscv_data$pea_wiscv_tss)
+# boxplot(wiscv_data$pea_wiscv_tss)$out
+
+# Subset total sum score and subject ID
+wiscv_data <- wiscv_data[,c("src_subject_id", "pea_wiscv_tss")]
+
+# Rey Auditory Verbal Learning Test (RAVLT)
+
+# Load ravlt data
+ravlt_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_ravlt.csv")
+
+# Subset timepoint
+ravlt_data <- subset_time(ravlt_data)
+
+# Calculate an average total score from the total correct scores across trials
+ravlt_data$mean_tcs <- 
+apply(ravlt_data[ , grepl("tc", names(ravlt_data)) ],1,mean)
+
+# Check for extreme values
+# summary(ravlt_data$mean_tcs)
+# boxplot(ravlt_data$mean_tcs)$out
+
+# Turn scores of four participants with either 0,0.25, or 0.375 as score into NA
+# ravlt_data$mean_tcs[ravlt_data$mean_tcs ==0] <- NA
+# ravlt_data$mean_tcs[ravlt_data$mean_tcs == 0.25] <- NA
+# ravlt_data$mean_tcs[ravlt_data$mean_tcs == 0.375] <- NA
+
+# COMMENT: Exclusion of 4 responses due to extreme values
+
+# Subset total correct score and subject ID
+ravlt_data <- ravlt_data[,c("src_subject_id", "mean_tcs")]
+
+# 1.5 Demographic variables
+
+p_demo <- read.csv("/abcd-data-release-5.1/core/abcd-general/abcd_p_demo.csv")
+
+# Select baseline measurements
+p_demo_baseline <- p_demo$eventname == "baseline_year_1_arm_1"
+
+# Select variables at baseline together with subject ID
+p_demo_sel <- p_demo[p_demo_baseline, 
+c("src_subject_id", 
+    "demo_brthdat_v2", 
+    "demo_sex_v2", 
+    "race_ethnicity", 
+     "demo_comb_income_v2", 
+     "demo_prnt_marital_v2",  # turn into factor
+     "demo_prnt_ed_v2", 
+     "demo_prnt_age_v2")]
+
+# Turn 777 and 999 responses to NA
+p_demo_sel[p_demo_sel == 777 | p_demo_sel == 999] <- NA
+
+# Remove participants whose assigned sex at birth was not 1 or 2 due to low group size for 
+p_demo_sel <- p_demo_sel[p_demo_sel$demo_sex_v2 != 3,]
+
+# Turn age and income into type numerical
+p_demo_sel$demo_brthdat_v2 <- as.numeric(p_demo_sel$demo_brthdat_v2)
+p_demo_sel$demo_prnt_age_v2 <- as.numeric(p_demo_sel$demo_prnt_age_v2)
+p_demo_sel$demo_comb_income_v2 <- as.numeric(p_demo_sel$demo_comb_income_v2)
+
+# Turn sex, marital status, and race/ethnicity into type factor
+p_demo_sel$demo_sex_v2 <- as.numeric(p_demo_sel$demo_sex_v2)
+p_demo_sel$race_ethnicity <- as.numeric(p_demo_sel$race_ethnicity)
+p_demo_sel$demo_prnt_marital_v2 <- as.numeric(p_demo_sel$demo_prnt_marital_v2)
+
+# Create new summary labels for education; make it ordinal
+education_levels <- p_demo_sel$demo_prnt_ed_v2
+
+# Convert to character for assigning labels
+new_education_labels <- as.character(education_levels)
+
+# Apply category labels using indexing
+new_education_labels[education_levels %in% c(0, 1, 2, 3, 4)] <- "No Formal Education / Early Primary"
+new_education_labels[education_levels %in% c(5, 6, 7, 8)] <- "Primary Education"
+new_education_labels[education_levels %in% c(9, 10, 11)] <- "Some Secondary Education (No Diploma)"
+new_education_labels[education_levels %in% c(12, 13, 14)] <- "Completed Secondary Education"
+new_education_labels[education_levels %in% c(15, 16, 17)] <- "Some College / Associate Degree"
+new_education_labels[education_levels == 18] <- "Bachelor’s Degree"
+new_education_labels[education_levels %in% c(19, 20, 21)] <- "Graduate / Professional Education"
+new_education_labels[education_levels == 777] <- "Missing / Declined Response"
+
+# Create a new object based on education_labels
+education_ordinal <- new_education_labels
+
+# Assign numerical values based on education labels
+education_ordinal[education_ordinal == "No Formal Education / Early Primary"] <- 1
+education_ordinal[education_ordinal == "Primary Education"] <- 2
+education_ordinal[education_ordinal == "Some Secondary Education (No Diploma)"] <- 3
+education_ordinal[education_ordinal == "Completed Secondary Education"] <- 4
+education_ordinal[education_ordinal == "Some College / Associate Degree"] <- 5
+education_ordinal[education_ordinal == "Bachelor’s Degree"] <- 6
+education_ordinal[education_ordinal == "Graduate / Professional Education"] <- 7
+education_ordinal[education_ordinal == "Missing / Declined Response"] <- NA  # Assign NA for missing data
+
+# Convert to numeric
+education_ordinal <- as.numeric(education_ordinal)
+
+# Replace education variable in the p_demo_sel dataframe
+p_demo_sel$demo_prnt_ed_v2 <- education_ordinal
+
+# Turn selected variables into class character
+p_demo_sel[,c("demo_sex_v2","race_ethnicity","demo_prnt_marital_v2")] <- apply(p_demo_sel[,c("demo_sex_v2","race_ethnicity","demo_prnt_marital_v2")],2,as.character)
+
+# Select baseline
+
+# Add demos to datasets
+
+# Write a function
+add_demos <- function(x){
+ merged_df <- merge(x, p_demo_sel, by = "src_subject_id", all.x = T)
+return(merged_df)
+}
+
+# Add to datasets
+# sMRI_vol_cortical_data <- add_demos(sMRI_vol_cortical_data)
+
+# 1.4 Combine datasets and asses missingness
+
+
+# Subset each dataset based on shared subject IDs
+
+# Define a list of all datasets
+datasets <- c( list(ddis_data,
+sMRI_vol_cortical_subset,
+sMRI_vol_subcortical_subset,
+sMRI_thick_cortical_subset,
+rsfMRI_cort_subset,
+rsfMRI_subcort_subset,
+NIH_data_2y,
+p_demo_sel,
+ravlt_data,
+lmt_data
+), 
+fMRI_cort_all, 
+fMRI_subcort_all)
+  
+    # Get the "src_subject_id" column for each table
+    subject_ids <- lapply(datasets, function(data) data$src_subject_id)
+    
+    # Find common subject_ids across all tables
+    common_subjects <- Reduce(intersect, subject_ids)
+
+  # Subset each dataset based on the common subject IDs
+    subsets <- lapply(datasets, function(dataset) {
+      dataset[which(dataset$src_subject_id %in% common_subjects), ]
+    })
+   
+  # Combine the results into a single dataframe, aligning by shared subject IDs  
+
+    # Remove the columns corresponding to subject ID and eventname in each dataset
+    subsets_colremoved <- lapply(subsets, function(x) as.data.frame(x[,!(names(x) %in% c("src_subject_id","eventname")), drop = FALSE]))
+
+    # Remove names of list
+    names(subsets_colremoved) <- NULL
+
+    # Combine the results into a single dataframe, aligning by shared subject IDs
+    combined_data <- cbind(src_subject_id = subsets[[1]][,"src_subject_id"], do.call(cbind, subsets_colremoved))
+
+# 1.6 Exclusion based on exclusion criteria
+
+# Load function to exclude subject based on list of exclusion criteria (see function)
+source("exclude_subjects.R")
+
+%% COMMENT: Upload syntax for exclude_subjects function
+
+# Apply function to all datasets
+combined_data_excl <- exclude_subjects(combined_data)
+
+# 1.7 Missing data and imputation (optional)
+
+# Use list-wise deletion
+combined_data_excl_cc <- combined_data_excl[complete.cases(combined_data_excl),]
+
+# Create a csv file for the combined data
+# saveRDS(combined_data_excl_cc, "ddis_combined_data.rds")
+
+# 1.8 Feature indices for base models
+
+# Dataframe with variable names per base model
+
+# Create a data frame with variable names per base model
+var_names_base <- mri_var_names_df
+var_names_base$sociodemographics = rep("", nrow(var_names_base))
+var_names_base$cognition = rep("", nrow(var_names_base)) 
+var_names_base$ddis = rep("", nrow(var_names_base)) 
+
+#  Assign variable names for sociodemographics and cognition base models
+var_names_base$sociodemographics[1:ncol(p_demo_sel[,-1])] <- names(p_demo_sel)[-1] 
+var_names_base$cognition[1:7] <- c(names(NIH_data_2y)[-1], names(ravlt_data)[-1],names(lmt_data)[-1])
+
+var_names_base$ddis[1] <- "discAUC"
+
+# Save variable names of base models as RDS file
+
+
+# Function to generate domain indices and merge dataframe
+
+create_group_mapping_and_indices <- function(var_names_base, combined_data) {
+ 
+ # Step 1: Create the group mapping dataframe
+  group_mapping_df <- data.frame(
+    Group_Label = names(var_names_base),
+    Group_Number = seq_along(names(var_names_base))
+  )
+
+  # Step 2: Create subsets of combined data for each variable group
+  group_subsets <- list() 
+
+  for (group_name in names(var_names_base)) {
+    variables_in_group <- var_names_base[[group_name]]
+    variables_in_group <- variables_in_group[variables_in_group != ""]  # Remove empty strings
+
+    # Create subset only with valid variables present in combined data
+    group_subsets[[group_name]] <- combined_data[, colnames(combined_data) %in% variables_in_group, drop = FALSE]
+  }
+
+  # Step 3: Combine subsets into one data frame
+  combined_group_data <- do.call(cbind, group_subsets) 
+
+  # Step 4: Assign domain index numbers based on subset sizes
+  repetition_lengths <- sapply(group_subsets, ncol)
+  domain_feature_indices <- rep(seq_along(repetition_lengths), times = repetition_lengths)
+
+  # Return results as a list
+  return(list(
+    group_mapping_df = group_mapping_df,
+    combined_group_data = combined_group_data,
+    domain_feature_indices = domain_feature_indices
+  ))
+}
+
+# Create combined data frame and domain feature indices for analysis
+data_and_indices <- create_group_mapping_and_indices(var_names_base, combined_data_excl_cc)
+
+# Save dataframe and indices as RDS files
+saveRDS(data_and_indices[[2]], "ddis_combined_data.rds")
+saveRDS(data_and_indices[[3]], "ddis_feature_indices.rds")
