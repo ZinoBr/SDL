@@ -143,9 +143,6 @@ NIH_data_2y <- NIH_data[,!NIH_excl]
 # apply(NIH_data[,-(1:2)],2,function(x)summary(as.numeric(x)))
 # apply(NIH_data[,-(1:2)],2,function(x)sort(boxplot(as.numeric(x))$out))
 
-
-# OPTION: Add responses of excluded subscales from baseline timepoint
-
 # load NIH toolbox data 
 NIH_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_nihtb.csv")
 
@@ -177,8 +174,6 @@ lmt_data <- subset_time(lmt_data)
 # Subset efficiency score and subject ID
 lmt_data <- lmt_data[,c("src_subject_id","lmt_scr_efficiency")]
 
-# COMMENT: The efficiency score is the ratio of the percentage of correct responses to reaction time, and is more a measure of overal cognitive efficiency in visuospatial processing, whereas the pure correct response ignoring response time is more about accuracy alone.
-
 # Check for outliers
 summary(lmt_data[,2])
 boxplot(lmt_data$lmt_scr_efficiency)$out
@@ -195,11 +190,8 @@ wiscv_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_wisc.csv
 
 # Subset timepoint
 # wiscv_data <- subset_time(wiscv_data)
-# COMMENT: Data available only for baseline timepoint
 
-# Check for extreme values
-# summary(wiscv_data$pea_wiscv_tss)
-# boxplot(wiscv_data$pea_wiscv_tss)$out
+# COMMENT: Data available only for baseline timepoint
 
 # Subset total sum score and subject ID
 wiscv_data <- wiscv_data[,c("src_subject_id", "pea_wiscv_tss")]
@@ -215,17 +207,6 @@ ravlt_data <- subset_time(ravlt_data)
 # Calculate an average total score from the total correct scores across trials
 ravlt_data$mean_tcs <- 
 apply(ravlt_data[ , grepl("tc", names(ravlt_data)) ],1,mean)
-
-# Check for extreme values
-# summary(ravlt_data$mean_tcs)
-# boxplot(ravlt_data$mean_tcs)$out
-
-# Turn scores of four participants with either 0,0.25, or 0.375 as score into NA
-# ravlt_data$mean_tcs[ravlt_data$mean_tcs ==0] <- NA
-# ravlt_data$mean_tcs[ravlt_data$mean_tcs == 0.25] <- NA
-# ravlt_data$mean_tcs[ravlt_data$mean_tcs == 0.375] <- NA
-
-# COMMENT: Exclusion of 4 responses due to extreme values
 
 # Subset total correct score and subject ID
 ravlt_data <- ravlt_data[,c("src_subject_id", "mean_tcs")]
@@ -304,7 +285,7 @@ p_demo_sel[,c("demo_sex_v2","race_ethnicity","demo_prnt_marital_v2")] <- apply(p
 
 # Select baseline
 
-# Add demos to datasets
+# Add demographic information to datasets
 
 # Write a function
 add_demos <- function(x){
@@ -312,8 +293,6 @@ add_demos <- function(x){
 return(merged_df)
 }
 
-# Add to datasets
-# sMRI_vol_cortical_data <- add_demos(sMRI_vol_cortical_data)
 
 # 1.4 Combine datasets and asses missingness
 
@@ -362,15 +341,13 @@ fMRI_subcort_all)
 # Load function to exclude subject based on list of exclusion criteria (see function)
 source("exclude_subjects.R")
 
-%% COMMENT: Upload syntax for exclude_subjects function
-
 # Apply function to all datasets
 combined_data_excl <- exclude_subjects(combined_data)
 
 # 1.7 Missing data and imputation (optional)
 
 # Use list-wise deletion
-combined_data_excl_cc <- combined_data_excl[complete.cases(combined_data_excl),]
+# combined_data_excl_cc <- combined_data_excl[complete.cases(combined_data_excl),]
 
 # Create a csv file for the combined data
 # saveRDS(combined_data_excl_cc, "ddis_combined_data.rds")
@@ -388,10 +365,7 @@ var_names_base$ddis = rep("", nrow(var_names_base))
 #  Assign variable names for sociodemographics and cognition base models
 var_names_base$sociodemographics[1:ncol(p_demo_sel[,-1])] <- names(p_demo_sel)[-1] 
 var_names_base$cognition[1:7] <- c(names(NIH_data_2y)[-1], names(ravlt_data)[-1],names(lmt_data)[-1])
-
 var_names_base$ddis[1] <- "discAUC"
-
-# Save variable names of base models as RDS file
 
 
 # Function to generate domain indices and merge dataframe
