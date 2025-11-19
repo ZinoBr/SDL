@@ -30,7 +30,6 @@ ddis_data[,-c(1:2)] <- round(as.numeric(ddis_data[,-c(1:2)]), digits = 2)
 # As dataframe
 mri_var_names_df <- read.csv("ABCD DDIS variable names.csv")
 
-%% COMMENT: Add syntax for retrieving DDIS variable names
 
 # As vector
 mri_var_names_vec <- as.vector(unlist(mri_var_names_df)[unlist(mri_var_names_df) != ""])
@@ -184,8 +183,6 @@ boxplot(lmt_data$lmt_scr_efficiency)$out
 # Turn extreme values for efficiency to NA
 lmt_data[which( lmt_data$lmt_scr_efficiency %in% boxplot(lmt_data$lmt_scr_efficiency)$out),"lmt_scr_efficiency"] <- NA
 
-# COMMENT: Exclusion of 14 responses due to extreme values
-
 # WISCV Matrix reasoning
 
 # Load lmt data
@@ -193,8 +190,6 @@ wiscv_data <- read.csv("/abcd-data-release-5.1/core/neurocognition/nc_y_wisc.csv
 
 # Subset timepoint
 # wiscv_data <- subset_time(wiscv_data)
-
-# COMMENT: Data available only for baseline timepoint
 
 # Subset total sum score and subject ID
 wiscv_data <- wiscv_data[,c("src_subject_id", "pea_wiscv_tss")]
