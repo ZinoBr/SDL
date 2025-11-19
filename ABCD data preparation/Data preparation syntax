@@ -11,6 +11,9 @@ ddis_data <- ddis_data[c(ddis_data$eventname == "3_year_follow_up_y_arm_1"),]
 source("calculateAUC.R")
 ddis_data_auc <- calculate_auc(ddis_data)
 
+# NOTE: The function includes a selection procedure of participants based on 
+# missing values, constant scores, and inconsistencies in the responses
+
 # Round the AUC values to two decimal places
 ddis_data_auc$discAUC <- round(ddis_data_auc$discAUC, digits = 2)
 
