@@ -1,0 +1,148 @@
+#  Analysis of ABCD data on an HPC (high-performance computing) cluster
+#----------------------------------------------------------------------
+
+
+
+#  Preparations
+#-----------------------------------------------------------------
+
+
+
+#  1. Load data & define outcome variable and base model indices
+#------------------------------------------------------------------
+
+# Load data
+data <- readRDS("ddis_combined_data.rds")
+
+# Load domain feature indices object (indicates domain for each feature)
+domain_feature_indices <- readRDS("ddis_feature_indices.rds")
+
+# Define outcome variable
+outcome <- "discAUC"
+
+
+
+#  1.2. Prepare conditions for SLURM task execution
+#-----------------------------------------------------------------
+
+# Load seeds
+load("seeds.RData")
+
+# Get the SLURM task ID
+TID <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+
+# Design matrix
+conditions <- expand.grid(seed, 1:10)
+conditions <- conditions[order(conditions[,1]),]
+
+# Set conditions based on TID
+seed <- conditions[TID,1]
+cond_i <- conditions[TID,2]
+
+
+
+#  1.3. Define predictor matrix X and y
+#------------------------------------------------------------------
+
+# Define index lists incl. psex
+index_y <- which(names(data) == outcome)
+
+# Define predictor matrix X
+X <- as.matrix(data[,!domain_feature_indices == 27]) # excluding data of outcome variable
+
+# Define y
+y <- data[,index_y]
+
+# Indicate model configurations by view indices
+view_indices <- domain_feature_indices[!domain_feature_indices == 27]
+
+
+
+#  2. Analysis
+#------------------------------------------------------------------
+
+
+
+#  2.1. Libraries
+#------------------------------------------------------------------
+
+library("foreach")
+library("glmnet")
+library("mvs")
+
+
+#  2.2. Partition into training and test set
+#------------------------------------------------------------------
+
+# Load function to create k folds
+source("create_k_folds_vector.R")
+
+# Define number of folds
+k <- 10
+
+# Create k folds
+folds <- create_k_folds_vector(data[,1], k = 10)
+
+# separate training and test sets
+xtrain <- X[folds != cond_i,]
+ytrain = data[folds != cond_i,index_y]
+xtest <- X[folds == cond_i,]
+ytest = data[folds == cond_i,index_y]
+
+
+
+#  2.3. Execute MVS using the mvs function
+#------------------------------------------------------------------
+
+# load kFolds function
+source("kFolds.R")
+
+# Fit MVS
+fit <- mvs(x = xtrain, y = ytrain, view = as.matrix(view_indices), family = "gaussian", std.meta = TRUE)
+
+# Compute MSE and RMSE values
+
+# Base models
+base_models <- list()
+
+# Base MSEs
+baseMSEs <- list()
+n_base_models <- length(unique(view_indices))
+
+for (j in 1:n_base_models){
+  base_models[[j]] <- fit$"Level 1"$models[[j]]  
+  base_pred <-  predict(base_models[[j]], xtest[,view_indices == j], s = 'lambda.min')
+  baseMSEs[[j]] <- mean((ytest - base_pred)^2)
+}
+
+
+# Mean model
+mean_model_ind <- length(unique(view_indices)) + 1
+ base_models[[n_base_models + 1]] <- lm(formula = paste0(outcome," ~ 1"), data = data[folds != cond_i,])
+ base_pred <-  predict(base_models[[n_base_models + 1]], data[folds == cond_i,])
+ baseMSEs[[n_base_models + 1]] <- mean((ytest - base_pred)^2)
+
+# Base RMSEs
+baseRMSEs <- lapply(baseMSEs, sqrt)
+
+# Meta model MSE and RMSE
+metaMSE <- mean((ytest - predict(fit, xtest))^2)
+metaRMSE <- sqrt(mean((ytest - predict(fit, xtest))^2))
+
+
+
+#  2.4. Save the results
+#------------------------------------------------------------------
+
+results <-
+  list(
+    seed = seed[1],
+    MVS_fit = fit,
+    base_models = base_models,
+    baseMSEs = baseMSEs,
+    baseRMSEs = baseRMSEs,
+    metaMSE = metaMSE,
+    metaRMSE = metaRMSE
+  )
+
+saveRDS(results, file=paste0("batchrun_",TID,".rds") )
