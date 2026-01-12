@@ -6,3 +6,7 @@ The folder ABCD data preparation contains syntax and helper functions used for d
 For a showcase example of SDL, either visit the link below or download and open the html file "Showcase-SDL.html".
 
 https://zinobr.github.io/SDL/Showcase%20example.html
+
+**Graphical abstract**
+
+<img src = "Graphical abstract.png" with = 600px"/>
