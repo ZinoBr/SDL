@@ -9,4 +9,4 @@ https://zinobr.github.io/SDL/Showcase%20example.html
 
 **Graphical abstract**
 
-<img src = "Graphical abstract.png" with = 600px"/>
+<img width="1920" height="1080" alt="Graphical abstract" src="https://github.com/user-attachments/assets/487fb81b-5b6c-4f40-82c1-4898146f361d" />
